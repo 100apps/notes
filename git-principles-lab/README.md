@@ -1,39 +1,57 @@
-# Git 原理实验台
+# Git 原理实验台（升级版）
 
-日期：2026-09-19
+这版改成两个核心模块：
 
-## 摘要
+## 左边：仓库文件视图
 
-Git 可以近似理解为：
+直接展示并联动：
 
-> Content-addressed Object Store + Merkle DAG + Mutable Refs + Index + Working Tree
+- 工作区文件
+- `.git/HEAD`
+- `.git/index`
+- `.git/refs/heads/*`
+- `.git/objects/*`
+- `.git/worktrees/*`
+- linked worktree 文件
 
-这份交互式材料用少数 Git plumbing 原语模拟上层命令，重点理解：
+可以点击任意文件查看内容；主工作区文件可以直接编辑。右侧每执行一步 Git 命令，左侧会高亮本步骤修改的文件，并展示该文件的 `before → after`。
 
-- `blob / tree / commit`
-- `HEAD / branch / ref`
-- `index`
+## 右边：Git 命令执行区
+
+支持：
+
+- `git status`
 - `git add`
 - `git commit`
+- `git branch`
 - `git checkout`
+- `git reset --hard`
 - `git rebase`
-- Author Date 与 Committer Date 的区别
+- `git worktree add`
 
-## 核心结论
+每个命令都拆解为多个内部步骤，并说明：
 
-1. **commit 不是 diff**：commit 指向一棵完整 tree，并记录 parent。
-2. **branch 本质是可变 ref**：它只是一个指向 commit OID 的指针。
-3. **Git 底层很像 KV DB**：key 是对象内容的 hash，value 是不可变对象。
-4. **rebase 不是移动旧 commit**：它在新的 parent 上重新创建 commit，因此 OID 会变化。
-5. **Author Date 通常保留，Committer Date 在 rebase 时刷新**。
+1. 这一步在做什么
+2. 为什么要做
+3. 修改了哪些仓库文件
+4. 文件前后内容如何变化
 
-## 交互实验建议
+## 推荐实验
 
-1. 创建 `feature` 分支。
-2. checkout 到 `feature`。
-3. 修改文件并 commit。
-4. checkout 到 `main`。
-5. 修改文件并 commit。
-6. checkout 回 `feature`。
-7. 执行 `git rebase main`。
-8. 观察右侧 plumbing 命令、Object DB、refs 和 commit OID 的变化。
+### Rebase
+
+1. 点击“构造 rebase 场景”
+2. 执行 `git rebase main`
+3. 逐步查看 `.git/ORIG_HEAD`、objects、refs、index、工作区的变化
+
+### Worktree
+
+1. 点击“构造 worktree 场景”
+2. 查看 `.git/worktrees/*`
+3. 对比主仓库与 linked worktree 的 `.git` 关系
+
+核心目标是建立：
+
+> Git 命令 → 仓库文件变化
+
+而不是只记命令表面行为。
