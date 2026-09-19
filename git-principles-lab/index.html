@@ -1,38 +1,656 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Git 原理实验台：仓库文件 × 命令执行</title><style>
-:root{--bg:#f6f7f8;--p:#fff;--line:#dfe3e8;--text:#18202a;--muted:#667085;--blue:#eef4ff;--b:#2563eb;--g:#16794b;--o:#9a6700}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}main{max-width:1500px;margin:auto;padding:18px}h1{margin:0 0 6px;font-size:28px}.lead{color:var(--muted);line-height:1.6;margin-bottom:14px}.layout{display:grid;grid-template-columns:1.08fr .92fr;gap:14px}.panel{background:var(--p);border:1px solid var(--line);border-radius:14px;padding:13px}.title{font-weight:700;margin-bottom:10px}.tools,.row,.chips{display:flex;gap:7px;flex-wrap:wrap;align-items:center}button,input{font:13px ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid var(--line);border-radius:9px;background:#fff;padding:8px 10px}button{cursor:pointer}button.primary{background:var(--blue);border-color:#c8d7ff}input{width:100%}.repo{display:grid;grid-template-columns:320px 1fr;gap:10px;margin-top:10px}.files{max-height:720px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:7px;background:#fafbfc}.group{font:11px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);text-transform:uppercase;margin:9px 6px 5px}.f{width:100%;text-align:left;border-color:transparent;background:transparent;padding:6px 7px}.f.sel,.f.changed{background:#f2f6ff;border-color:#bfd0ff}.badge{font-size:10px;border-radius:99px;padding:2px 5px;margin-left:4px;background:#eef2f6;color:#475467}.badge.s{background:#eafaf2;color:var(--g)}.badge.m{background:#fff7e6;color:var(--o)}.viewer{display:grid;grid-template-columns:1fr 1fr;gap:9px}textarea,pre{width:100%;min-height:280px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fbfbfc;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;word-break:break-word;margin:0}textarea{resize:vertical}.meta{font-size:12px;color:var(--muted);margin:5px 0 8px}.cmds{display:grid;gap:8px}.cmd{border:1px solid var(--line);border-radius:12px;padding:10px;background:#fafbfc}.cmdh{display:flex;justify-content:space-between;gap:8px;align-items:center}.cmdname{font:700 13px ui-monospace,SFMono-Regular,Menlo,monospace}.args{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.args.one{grid-template-columns:1fr}.steps{display:grid;gap:7px;margin-top:10px}.step{border:1px solid var(--line);border-radius:10px;padding:9px;background:#fff;cursor:pointer}.step.sel{background:#f5f8ff;border-color:#a9c2ff}.step b{font-size:13px}.small{font-size:12px;color:var(--muted);line-height:1.5}.chg{display:inline-block;font:10px ui-monospace,SFMono-Regular,Menlo,monospace;background:#eef2f6;border-radius:99px;padding:3px 6px;margin:5px 4px 0 0}@media(max-width:1050px){.layout,.repo,.viewer{grid-template-columns:1fr}.files{max-height:280px}} </style></head><body><main>
-<h1>Git 原理实验台</h1><div class="lead">左边是真正的“仓库文件视角”：工作区、<code>.git/HEAD</code>、<code>.git/index</code>、refs、objects、worktrees。右边执行命令后，逐步展示每一步到底改了哪些文件，并与左边联动。</div>
-<div class="layout"><section class="panel"><div class="title">仓库文件</div><div class="tools"><button class="primary" id="reset">重置</button><button id="sceneR">构造 rebase 场景</button><button id="sceneW">构造 worktree 场景</button></div><div class="repo"><div id="files" class="files"></div><div><div id="path" style="font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace"></div><div id="meta" class="meta"></div><div class="viewer"><div><textarea id="editor"></textarea><div class="row" style="margin-top:7px"><button id="save">保存工作区文件</button></div></div><pre id="diff">选择右侧步骤后，这里显示当前文件在该步骤中的 before → after。</pre></div></div></div></section>
-<section class="panel"><div class="title">Git 命令</div><div class="cmds">
-<div class="cmd"><div class="cmdh"><span class="cmdname">git status</span><button data-c="status" class="run primary">执行</button></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git add</span><button data-c="add" class="run">执行</button></div><div class="args one"><input id="addArg" value="."></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git commit</span><button data-c="commit" class="run">执行</button></div><div class="args one"><input id="msg" value="save current changes"></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git branch</span><button data-c="branch" class="run">执行</button></div><div class="args one"><input id="branchArg" value="feature"></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git checkout</span><button data-c="checkout" class="run">执行</button></div><div class="args one"><input id="checkoutArg" value="main"></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git reset --hard</span><button data-c="resetHard" class="run">执行</button></div><div class="args one"><input id="resetArg" value="main"></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git rebase</span><button data-c="rebase" class="run">执行</button></div><div class="args one"><input id="rebaseArg" value="main"></div></div>
-<div class="cmd"><div class="cmdh"><span class="cmdname">git worktree add</span><button data-c="worktree" class="run">执行</button></div><div class="args"><input id="wtName" value="lab2"><input id="wtBranch" value="lab2"></div></div>
-</div><div style="margin-top:12px"><div class="small">最近执行</div><div id="last" class="cmdname">尚未执行命令</div><div id="summary" class="small" style="margin-top:4px"></div><div id="steps" class="steps"></div></div></section></div>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Git 原理实验台 · Repository Internals</title>
+<style>
+:root{
+  --bg:#f5f6f8;--surface:#ffffff;--surface-2:#f8fafc;--text:#17202a;--muted:#667085;
+  --line:#dfe3e8;--line-strong:#c9d0d8;--accent:#2457d6;--accent-bg:#eef3ff;
+  --green:#117a50;--green-bg:#ecfdf3;--amber:#9a6700;--amber-bg:#fff7df;
+  --red:#b42318;--red-bg:#fff0ee;--violet:#6941c6;--violet-bg:#f4f0ff;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{margin:0;color:var(--text);background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid rgba(36,87,214,.18);outline-offset:1px}
+.app{max-width:1580px;margin:0 auto;padding:20px}
+.hero{display:flex;justify-content:space-between;gap:24px;align-items:flex-end;margin-bottom:14px}
+.hero h1{font-size:29px;letter-spacing:-.5px;margin:0 0 6px}.hero p{margin:0;max-width:900px;color:var(--muted);line-height:1.65;font-size:14px}
+.statebar{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}.state-chip{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:7px 10px;min-width:94px}.state-chip .k{font:10px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.4px}.state-chip .v{font:700 12px var(--mono);margin-top:3px;white-space:nowrap}
+.error-banner{display:none;margin:0 0 12px;padding:10px 12px;border:1px solid #f4b5ae;background:var(--red-bg);color:var(--red);border-radius:10px;font-size:13px}
+.workspace{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(420px,.92fr);gap:14px;align-items:start}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}.panel-head{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}.panel-title{font-size:14px;font-weight:700}.panel-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.scenario-bar{display:flex;gap:7px;flex-wrap:wrap}.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:9px;padding:7px 10px;font-size:12px}.btn:hover{background:var(--surface-2)}.btn.primary{background:var(--accent);border-color:var(--accent);color:white}.btn.soft{background:var(--accent-bg);border-color:#cad8ff;color:#2148a6}.btn.danger{color:var(--red)}
+.repo-layout{display:grid;grid-template-columns:330px minmax(0,1fr);min-height:690px}.tree-pane{border-right:1px solid var(--line);background:#fbfcfd;min-width:0}.tree-toolbar{padding:9px;border-bottom:1px solid var(--line);display:flex;gap:7px}.tree-search{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12px;background:white}.tree-scroll{padding:8px;max-height:690px;overflow:auto}.tree-group{margin-bottom:12px}.tree-group-title{font:700 10px var(--mono);color:#7b8491;text-transform:uppercase;letter-spacing:.55px;padding:6px 7px}.file-row{width:100%;display:flex;align-items:center;gap:7px;text-align:left;border:1px solid transparent;background:transparent;border-radius:8px;padding:6px 7px;margin:1px 0;font:12px var(--mono);min-width:0}.file-row:hover{background:#f1f4f8}.file-row.selected{background:var(--accent-bg);border-color:#c6d5ff}.file-row.step-changed{box-shadow:inset 3px 0 0 var(--accent)}.file-icon{width:16px;text-align:center;color:#667085;flex:none}.file-path{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}.flags{display:flex;gap:4px;flex:none}.flag{font:700 9px var(--mono);border-radius:5px;padding:2px 4px;border:1px solid var(--line)}.flag.staged{color:var(--green);background:var(--green-bg);border-color:#bbebd1}.flag.modified{color:var(--amber);background:var(--amber-bg);border-color:#efd895}.flag.step{color:var(--accent);background:var(--accent-bg);border-color:#c6d5ff}
+.viewer-pane{min-width:0;display:flex;flex-direction:column}.viewer-head{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.viewer-path{font:700 13px var(--mono);word-break:break-all}.viewer-meta{font-size:11px;color:var(--muted);margin-top:4px}.viewer-actions{display:flex;gap:6px;flex-wrap:wrap}.content-tabs{display:flex;gap:0;border-bottom:1px solid var(--line);padding:0 12px}.content-tab{border:0;background:transparent;padding:9px 10px;font-size:12px;color:var(--muted);border-bottom:2px solid transparent}.content-tab.active{color:var(--text);font-weight:700;border-color:var(--accent)}.viewer-body{padding:12px;min-height:430px}.editor,.codebox{width:100%;min-height:410px;border:1px solid var(--line);border-radius:10px;background:#fbfcfe;padding:12px;font:12px/1.6 var(--mono);white-space:pre-wrap;word-break:break-word;overflow:auto;margin:0}.editor{resize:vertical}.codebox.diff .before-label,.codebox.diff .after-label{font-weight:700}.diff-empty{color:var(--muted)}.viewer-foot{padding:9px 12px;border-top:1px solid var(--line);font-size:11px;color:var(--muted);background:#fbfcfd}
+.command-panel{position:sticky;top:10px}.command-body{padding:12px}.command-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:12px}.cmd-tab{border:1px solid var(--line);background:var(--surface);border-radius:9px;padding:8px 6px;font:11px var(--mono);text-align:center}.cmd-tab:hover{background:var(--surface-2)}.cmd-tab.active{background:var(--accent-bg);border-color:#b9cbff;color:#1d46ae;font-weight:700}
+.composer{border:1px solid var(--line);border-radius:12px;background:#fbfcfe;overflow:hidden}.terminal-line{background:#111827;color:#eef2f7;padding:10px 12px;font:13px var(--mono);white-space:pre-wrap;word-break:break-word}.arg-area{padding:10px 12px;display:grid;grid-template-columns:1fr 1fr;gap:9px}.field.full{grid-column:1/-1}.field label{display:block;font-size:10px;color:var(--muted);margin:0 0 5px;font-family:var(--mono)}.field input,.field select{width:100%;border:1px solid var(--line);border-radius:8px;background:white;padding:8px 9px;font:12px var(--mono)}.composer-foot{padding:9px 12px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;align-items:center}.command-help{font-size:11px;color:var(--muted);line-height:1.5;max-width:72%}
+.run-box{margin-top:12px;border-top:1px solid var(--line);padding-top:12px}.run-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.run-cmd{font:700 13px var(--mono);word-break:break-all}.run-summary{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}.timeline{margin-top:10px;display:grid;gap:7px}.step-card{position:relative;border:1px solid var(--line);background:white;border-radius:10px;padding:9px 10px 9px 42px;cursor:pointer}.step-card:hover{border-color:var(--line-strong)}.step-card.active{border-color:#a9c0ff;background:#f7f9ff}.step-no{position:absolute;left:10px;top:10px;width:23px;height:23px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#eef1f5;color:#4f5966;font:700 10px var(--mono)}.step-card.active .step-no{background:var(--accent);color:white}.step-title{font-size:12px;font-weight:700}.step-detail{font-size:11px;color:var(--muted);line-height:1.5;margin-top:3px;white-space:pre-wrap}.changes{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.change-pill{border:1px solid var(--line);border-radius:999px;background:#f4f6f8;padding:3px 6px;font:10px var(--mono);cursor:pointer}.change-pill.add{background:var(--green-bg);color:var(--green);border-color:#c4edd7}.change-pill.mod{background:var(--amber-bg);color:var(--amber);border-color:#efdcaa}.change-pill.del{background:var(--red-bg);color:var(--red);border-color:#f3c4be}.output-box{margin-top:10px;border:1px solid var(--line);background:#101827;color:#dce3ec;border-radius:10px;padding:10px;font:11px/1.55 var(--mono);white-space:pre-wrap;max-height:165px;overflow:auto}.empty{font-size:11px;color:var(--muted);padding:10px 0}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.legend span{font-size:10px;color:var(--muted)}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}.dot.s{background:#3ab274}.dot.m{background:#d69e2e}.dot.c{background:var(--accent)}
+@media(max-width:1180px){.workspace{grid-template-columns:1fr}.command-panel{position:static}.repo-layout{grid-template-columns:300px 1fr}.command-tabs{grid-template-columns:repeat(5,1fr)}}
+@media(max-width:760px){.app{padding:10px}.hero{display:block}.statebar{justify-content:flex-start;margin-top:10px}.repo-layout{grid-template-columns:1fr}.tree-pane{border-right:0;border-bottom:1px solid var(--line)}.tree-scroll{max-height:260px}.viewer-body{min-height:280px}.editor,.codebox{min-height:260px}.command-tabs{grid-template-columns:repeat(2,1fr)}.arg-area{grid-template-columns:1fr}.field.full{grid-column:auto}.composer-foot{align-items:flex-start;flex-direction:column}.command-help{max-width:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="hero">
+    <div>
+      <h1>Git 原理实验台</h1>
+      <p>把 Git 当成一个真实的本地数据库来学习：左侧是工作区和 <code>.git</code> 文件，右侧是 Git 命令。执行命令后，按内部步骤展示“这一步改了哪些文件”，并可逐文件查看 before / after。</p>
+    </div>
+    <div class="statebar" aria-label="repository status">
+      <div class="state-chip"><div class="k">HEAD</div><div class="v" id="state-head">main</div></div>
+      <div class="state-chip"><div class="k">COMMIT</div><div class="v" id="state-commit">--------</div></div>
+      <div class="state-chip"><div class="k">STAGED</div><div class="v" id="state-staged">0</div></div>
+      <div class="state-chip"><div class="k">UNSTAGED</div><div class="v" id="state-unstaged">0</div></div>
+    </div>
+  </div>
+  <div id="fatal" class="error-banner" role="alert"></div>
+
+  <div class="workspace">
+    <section class="panel">
+      <div class="panel-head">
+        <div><div class="panel-title">Repository filesystem</div><div class="panel-sub">工作区、.git internals 与 linked worktrees</div></div>
+        <div class="scenario-bar">
+          <button class="btn soft" id="scenario-rebase">Rebase 场景</button>
+          <button class="btn" id="scenario-worktree">Worktree 场景</button>
+          <button class="btn" id="scenario-dirty">制造未提交修改</button>
+          <button class="btn danger" id="reset-repo">重置</button>
+        </div>
+      </div>
+      <div class="repo-layout">
+        <aside class="tree-pane">
+          <div class="tree-toolbar"><input class="tree-search" id="file-search" placeholder="过滤文件，例如 refs / objects / README"></div>
+          <div class="tree-scroll" id="file-tree"></div>
+        </aside>
+        <div class="viewer-pane">
+          <div class="viewer-head">
+            <div><div class="viewer-path" id="viewer-path"></div><div class="viewer-meta" id="viewer-meta"></div></div>
+            <div class="viewer-actions"><button class="btn" id="save-file">保存工作区修改</button></div>
+          </div>
+          <div class="content-tabs">
+            <button class="content-tab active" data-view="current">当前内容</button>
+            <button class="content-tab" data-view="diff">本步骤变化</button>
+          </div>
+          <div class="viewer-body">
+            <textarea class="editor" id="file-editor"></textarea>
+            <pre class="codebox diff" id="file-diff" hidden></pre>
+          </div>
+          <div class="viewer-foot" id="viewer-foot">点击左侧文件查看内容。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel command-panel">
+      <div class="panel-head"><div><div class="panel-title">Command workbench</div><div class="panel-sub">选择命令、修改参数、执行并观察内部步骤</div></div></div>
+      <div class="command-body">
+        <div class="command-tabs" id="command-tabs"></div>
+        <div class="composer">
+          <div class="terminal-line" id="command-preview">$ git status</div>
+          <div class="arg-area" id="arg-area"></div>
+          <div class="composer-foot">
+            <div class="command-help" id="command-help"></div>
+            <button class="btn primary" id="execute-command">执行命令</button>
+          </div>
+        </div>
+
+        <div class="run-box">
+          <div class="run-head"><div><div class="panel-sub">最近一次执行</div><div class="run-cmd" id="run-command">尚未执行命令</div><div class="run-summary" id="run-summary"></div></div></div>
+          <div class="timeline" id="timeline"></div>
+          <pre class="output-box" id="command-output">选择一个命令开始实验。</pre>
+          <div class="legend"><span><i class="dot s"></i>S = staged</span><span><i class="dot m"></i>M = working tree modified</span><span><i class="dot c"></i>蓝线 = 当前步骤改动</span></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
 <script>
-(function(){var S,$=function(id){return document.getElementById(id)},H=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})},hash=function(x){var h=2166136261>>>0;for(var i=0;i<x.length;i++)h=Math.imul(h^x.charCodeAt(i),16777619)>>>0;return h.toString(16).padStart(8,'0')},keys=function(o){return Object.keys(o).sort()},clone=function(o){return JSON.parse(JSON.stringify(o))};
-function put(t,x){var id=hash(t+'\\0'+x);if(!S.obj[id])S.obj[id]={type:t,text:x};return id}function blob(id){return S.obj[id]?S.obj[id].text:''}function head(){return S.refs[S.branch]}function snap(id){return id&&S.commits[id]?clone(S.commits[id].snap):{}}function tree(index){var x=keys(index).map(function(p){return'100644 blob '+index[p]+'\\t'+p}).join('\\n'),id=put('tree',x);S.trees[id]=clone(index);return id}function commit(msg,parent,author){var t=tree(S.index),ct='T'+(++S.clock),at=author||ct,x='tree '+t+'\\n'+(parent?'parent '+parent+'\\n':'')+'author '+at+'\\ncommitter '+ct+'\\n\\n'+msg,id=put('commit',x);S.commits[id]={id:id,tree:t,parent:parent||null,msg:msg,at:at,ct:ct,snap:clone(S.index)};S.refs[S.branch]=id;return id}
-function sync(id){var s=snap(id);S.index=clone(s);S.work={};keys(s).forEach(function(p){S.work[p]=blob(s[p])})}function status(){var h=snap(head()),all={},st={staged:[],unstaged:[],untracked:[]};[h,S.index,S.work].forEach(function(o){keys(o).forEach(function(p){all[p]=1})});keys(all).forEach(function(p){var hb=h[p]||null,ib=S.index[p]||null,wb=Object.prototype.hasOwnProperty.call(S.work,p)?hash('blob\\0'+S.work[p]):null;if(!h[p]&&S.work[p]!=null&&!S.index[p])st.untracked.push(p);if(ib!==hb)st.staged.push(p);if(wb!==ib)st.unstaged.push(p)});return st}
-function repo(){var r={};keys(S.work).forEach(function(p){r[p]=S.work[p]});r['.git/HEAD']='ref: refs/heads/'+S.branch+'\\n';r['.git/index']=keys(S.index).map(function(p){return p+'\\t'+S.index[p]}).join('\\n');if(S.orig)r['.git/ORIG_HEAD']=S.orig+'\\n';keys(S.refs).forEach(function(b){r['.git/refs/heads/'+b]=S.refs[b]+'\\n'});keys(S.obj).forEach(function(id){r['.git/objects/'+id.slice(0,2)+'/'+id.slice(2)]=S.obj[id].type+'\\n\\n'+S.obj[id].text});keys(S.wt).forEach(function(n){var w=S.wt[n];r['.git/worktrees/'+n+'/HEAD']='ref: refs/heads/'+w.branch+'\\n';r['worktrees/'+n+'/.git']='gitdir: ../../.git/worktrees/'+n+'\\n';keys(w.files).forEach(function(p){r['worktrees/'+n+'/'+p]=w.files[p]})});return r}
-function delta(a,b){var all={},d=[];keys(a).forEach(function(p){all[p]=1});keys(b).forEach(function(p){all[p]=1});keys(all).forEach(function(p){var x=Object.prototype.hasOwnProperty.call(a,p)?a[p]:null,y=Object.prototype.hasOwnProperty.call(b,p)?b[p]:null;if(x!==y)d.push({p:p,b:x,a:y,t:x==null?'add':y==null?'del':'mod'})});return d}function start(c){S.run={cmd:c,steps:[]};S.selStep=0}function step(title,detail,fn){var a=repo();if(fn)fn();var b=repo();S.run.steps.push({title:title,detail:detail,d:delta(a,b)});S.selStep=S.run.steps.length-1}function done(x){S.summary=x||'';render()}
-function addAll(){keys(S.work).forEach(function(p){S.index[p]=put('blob',S.work[p])})}
-function reset(){S={clock:0,obj:{},trees:{},commits:{},refs:{},branch:'main',work:{'README.md':'# Mini Git\\n\\n教学仓库。\\n','app.js':'console.log(\"v1\");\\n'},index:{},wt:{},orig:null,run:{cmd:'初始仓库',steps:[]},summary:'',selStep:0,file:'README.md'};addAll();commit('initial commit',null);S.run.steps=[{title:'初始状态',detail:'一个 commit，工作区与 index 干净。',d:[]}];render()}
-function chain(id){var a=[];while(id){a.push(id);id=S.commits[id]?S.commits[id].parent:null}return a}function base(a,b){var m={};chain(b).forEach(function(x){m[x]=1});return chain(a).find(function(x){return m[x]})||null}
-function cmdStatus(){start('git status');var s=status();step('比较 HEAD / index / working tree','staged: '+(s.staged.join(', ')||'(none)')+'\\nunstaged: '+(s.unstaged.join(', ')||'(none)')+'\\nuntracked: '+(s.untracked.join(', ')||'(none)'));done('只读：status 不修改仓库文件。')}
-function cmdAdd(arg){start('git add '+arg);var ps=arg==='.'?keys(S.work):(S.work[arg]!=null?[arg]:[]);step('写 blob objects','工作区内容先进入 .git/objects。',function(){ps.forEach(function(p){put('blob',S.work[p])})});step('更新 .git/index','index 变成下一次 commit 的候选快照。',function(){ps.forEach(function(p){S.index[p]=put('blob',S.work[p])})});done('add = 写 blob + 更新 index。')}
-function cmdCommit(){var msg=$('msg').value||'commit';start('git commit -m "'+msg+'"');if(!status().staged.length){step('nothing to commit','index 与 HEAD 一致。');return done('没有新 commit。')}var id;step('写 tree object','把 index 物化为 tree。',function(){tree(S.index)});step('写 commit object','commit 保存 tree、parent、author/committer。',function(){id=commit(msg,head())});step('移动 branch ref','.git/refs/heads/'+S.branch+' 指向 '+id);done('commit = index → tree → commit → ref 前移。')}
-function cmdBranch(){var n=$('branchArg').value.trim();start('git branch '+n);step('创建 branch ref','branch 只是 refs/heads 下的一个文件。',function(){if(n&&!S.refs[n])S.refs[n]=head()});done('不会复制工作区或 commit。')}
-function cmdCheckout(){var n=$('checkoutArg').value.trim();start('git checkout '+n);if(!S.refs[n]){step('目标不存在',n);return done('checkout 失败')}step('修改 .git/HEAD','HEAD 改为 refs/heads/'+n,function(){S.branch=n});step('同步 index 与 working tree','用目标 commit 快照覆盖二者。',function(){sync(head())});done('checkout = 改 HEAD + 重写 index/working tree。')}
-function cmdReset(){var n=$('resetArg').value.trim(),id=S.refs[n]||S.commits[n]&&n;start('git reset --hard '+n);if(!id){step('目标不存在',n);return done('reset 失败')}step('保存 ORIG_HEAD','记录 reset 前的位置。',function(){S.orig=head()});step('移动当前 branch ref','refs/heads/'+S.branch+' → '+id,function(){S.refs[S.branch]=id});step('覆盖 index / working tree','--hard 会把未提交修改一起覆盖。',function(){sync(id)});done('reset --hard = 移 ref + 覆盖 index/working tree。')}
-function cmdRebase(){var up=$('rebaseArg').value.trim(),u=S.refs[up],old=head();start('git rebase '+up);if(!u||up===S.branch){step('参数无效','需要另一个存在的分支。');return done('rebase 未执行')}var b=base(old,u),list=[],c=old;while(c&&c!==b){list.push(c);c=S.commits[c].parent}list.reverse();step('记录 ORIG_HEAD','保存 rebase 前 HEAD。',function(){S.orig=old});if(!list.length){step('没有独有提交','无需 replay。');return done('无变化')}var np=u;list.forEach(function(oid,i){var oc=S.commits[oid],ps=snap(oc.parent),ds={},all={};keys(ps).forEach(function(p){all[p]=1});keys(oc.snap).forEach(function(p){all[p]=1});keys(all).forEach(function(p){if((ps[p]||null)!==(oc.snap[p]||null))ds[p]=oc.snap[p]||null});step('提取旧 commit '+oid,'得到相对 parent 的 patch。');step('应用到新 base','把第 '+(i+1)+' 个 patch 叠到 '+np+' 上。',function(){var ns=snap(np);keys(ds).forEach(function(p){if(ds[p]==null)delete ns[p];else ns[p]=ds[p]});S.index=clone(ns);S.work={};keys(ns).forEach(function(p){S.work[p]=blob(ns[p])})});step('创建新 commit','保留 AuthorDate，刷新 CommitterDate，并更新当前 branch ref。',function(){var prevBranch=S.branch,newid=commit(oc.msg,np,oc.at);S.refs[prevBranch]=newid;np=newid})});done('rebase = 在新 parent 上重建一串 commit。')}
-function cmdWt(){var n=$('wtName').value.trim(),br=$('wtBranch').value.trim();start('git worktree add '+n+' '+br);if(!S.refs[br])step('创建 branch ref','目标分支不存在，从当前 HEAD 创建。',function(){S.refs[br]=head()});step('写 .git/worktrees 元数据','主仓库记录 linked worktree。',function(){S.wt[n]={branch:br,files:{}}});step('物化额外工作树','把分支快照展开到 worktrees/'+n+'。',function(){var s=snap(S.refs[br]),f={};keys(s).forEach(function(p){f[p]=blob(s[p])});S.wt[n].files=f});done('worktree = 共享 object DB，但有独立工作区。')}
-function sceneR(){reset();start('构造 rebase 场景');step('创建 feature', '',function(){S.refs.feature=head()});step('checkout feature','',function(){S.branch='feature';sync(head())});step('feature commit','',function(){S.work['app.js']='console.log(\"feature\");\\n';addAll();commit('feature: app',head())});step('checkout main','',function(){S.branch='main';sync(head())});step('main commit','',function(){S.work['README.md']+ ='\\nmain changed.\\n';addAll();commit('main: readme',head())});step('checkout feature','现在可执行 git rebase main。',function(){S.branch='feature';sync(head())});done('rebase 场景已准备。')}
-function sceneW(){reset();start('构造 worktree 场景');S.refs.docs=head();step('创建 linked worktree metadata','',function(){S.wt['docs-view']={branch:'docs',files:{}}});step('物化 docs-view','',function(){var s=snap(S.refs.docs);keys(s).forEach(function(p){S.wt['docs-view'].files[p]=blob(s[p])})});done('worktree 场景已准备。')}
-function selected(){return S.run.steps[S.selStep]||null}function renderFiles(){var r=repo(),s=status(),st=selected(),chg={};if(st)st.d.forEach(function(x){chg[x.p]=x.t});var g={w:[],git:[],wt:[]};keys(r).forEach(function(p){(p.indexOf('.git/')===0?g.git:p.indexOf('worktrees/')===0?g.wt:g.w).push(p)});function list(ps){return ps.map(function(p){var badges='';if(s.staged.indexOf(p)>=0)badges+='<span class="badge s">S</span>';if(s.unstaged.indexOf(p)>=0)badges+='<span class="badge m">M</span>';if(chg[p])badges+='<span class="badge">'+chg[p]+'</span>';return'<button class="f '+(S.file===p?'sel ':'')+(chg[p]?'changed':'')+'" data-p="'+H(p)+'">'+H(p)+badges+'</button>'}).join('')}$('files').innerHTML='<div class="group">Working tree</div>'+list(g.w)+'<div class="group">.git</div>'+list(g.git)+'<div class="group">Linked worktrees</div>'+list(g.wt);document.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){S.file=b.getAttribute('data-p');render()}})}
-function renderView(){var r=repo(),p=S.file;if(r[p]==null)p=S.file=keys(r)[0];var editable=p&&p.indexOf('/')<0;$('path').textContent=p;$('meta').textContent=editable?'可编辑工作区文件：修改后保存，再观察 git add / commit。':'只读：Git 元数据、object 或 linked worktree 文件。';$('editor').readOnly=!editable;$('save').style.display=editable?'inline-block':'none';$('editor').value=r[p]||'';var st=selected(),hit=null;if(st)st.d.forEach(function(x){if(x.p===p)hit=x});$('diff').textContent=hit?'before\\n'+(hit.b==null?'(不存在)':hit.b)+'\\n\\n-----\\n\\nafter\\n'+(hit.a==null?'(已删除)':hit.a):(st?'当前步骤没有修改这个文件。':'选择右侧步骤后，这里显示当前文件在该步骤中的 before → after。')}
-function renderSteps(){$('last').textContent=S.run.cmd;$('summary').textContent=S.summary||'';$('steps').innerHTML=S.run.steps.map(function(x,i){var cs=x.d.map(function(d){return'<span class="chg">'+d.t+': '+H(d.p)+'</span>'}).join('');return'<div class="step '+(i===S.selStep?'sel':'')+'" data-s="'+i+'"><b>'+(i+1)+'. '+H(x.title)+'</b><div class="small">'+H(x.detail||'')+'</div><div>'+cs+'</div></div>'}).join('');document.querySelectorAll('[data-s]').forEach(function(e){e.onclick=function(){S.selStep=+e.getAttribute('data-s');render()}})}
-function render(){renderFiles();renderView();renderSteps()}$('save').onclick=function(){if(S.file&&S.file.indexOf('/')<0){S.work[S.file]=$('editor').value;render()}};$('reset').onclick=reset;$('sceneR').onclick=sceneR;$('sceneW').onclick=sceneW;document.querySelectorAll('.run').forEach(function(b){b.onclick=function(){var c=b.getAttribute('data-c');if(c==='status')cmdStatus();if(c==='add')cmdAdd($('addArg').value.trim());if(c==='commit')cmdCommit();if(c==='branch')cmdBranch();if(c==='checkout')cmdCheckout();if(c==='resetHard')cmdReset();if(c==='rebase')cmdRebase();if(c==='worktree')cmdWt()}});reset()})();
-</script></main></body></html>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+const deepClone = (value) => JSON.parse(JSON.stringify(value));
+const keys = (obj) => Object.keys(obj).sort();
+const short = (id) => id ? id.slice(0, 8) : '--------';
+const html = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+let repo;
+let selectedFile = 'README.md';
+let selectedStep = 0;
+let viewerMode = 'current';
+let selectedCommand = 'status';
+let commandArgs = {};
+
+function fail(message) {
+  const el = $('fatal');
+  el.style.display = 'block';
+  el.textContent = '页面内部错误：' + message;
+}
+window.addEventListener('error', (event) => fail(event.message || 'unknown error'));
+window.addEventListener('unhandledrejection', (event) => fail(event.reason?.message || String(event.reason)));
+
+function fnv1a(text) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619) >>> 0;
+  return h.toString(16).padStart(8, '0');
+}
+function oidFor(type, content) { return fnv1a(type + '\0' + content); }
+function putObject(type, content) {
+  const oid = oidFor(type, content);
+  if (!repo.objects[oid]) repo.objects[oid] = { type, content };
+  return oid;
+}
+function blobContent(oid) { return repo.objects[oid]?.content ?? ''; }
+function headCommitId() { return repo.refs[repo.headBranch] || null; }
+function snapshotOf(commitId) { return commitId && repo.commits[commitId] ? deepClone(repo.commits[commitId].snapshot) : {}; }
+function tick() { repo.clock += 1; return `T${repo.clock}`; }
+
+function writeTreeObject(indexSnapshot) {
+  const content = keys(indexSnapshot).map(path => `100644 blob ${indexSnapshot[path]}\t${path}`).join('\n');
+  const oid = putObject('tree', content);
+  repo.trees[oid] = deepClone(indexSnapshot);
+  return oid;
+}
+function writeCommitObject({ treeId, parentId, message, authorTime }) {
+  const committerTime = tick();
+  const author = authorTime || committerTime;
+  const content = [
+    `tree ${treeId}`,
+    parentId ? `parent ${parentId}` : '',
+    `author Guangfeng <demo@example> ${author}`,
+    `committer Guangfeng <demo@example> ${committerTime}`,
+    '', message
+  ].filter((line, i) => line !== '' || i >= 4).join('\n');
+  const oid = putObject('commit', content);
+  repo.commits[oid] = {
+    id: oid, tree: treeId, parent: parentId || null, message,
+    authorTime: author, committerTime,
+    snapshot: deepClone(repo.trees[treeId] || {})
+  };
+  return oid;
+}
+function materializeCommit(commitId) {
+  const snap = snapshotOf(commitId);
+  repo.index = deepClone(snap);
+  repo.working = {};
+  keys(snap).forEach(path => repo.working[path] = blobContent(snap[path]));
+}
+function stagePaths(paths) {
+  paths.forEach(path => {
+    if (Object.prototype.hasOwnProperty.call(repo.working, path)) repo.index[path] = putObject('blob', repo.working[path]);
+    else delete repo.index[path];
+  });
+}
+function stageAll() { stagePaths(keys(repo.working)); }
+function internalCommit(message) {
+  const treeId = writeTreeObject(repo.index);
+  const commitId = writeCommitObject({ treeId, parentId: headCommitId(), message });
+  repo.refs[repo.headBranch] = commitId;
+  return commitId;
+}
+
+function calculateStatus() {
+  const head = snapshotOf(headCommitId());
+  const paths = new Set([...keys(head), ...keys(repo.index), ...keys(repo.working)]);
+  const staged = [], unstaged = [], untracked = [];
+  [...paths].sort().forEach(path => {
+    const headOid = Object.prototype.hasOwnProperty.call(head, path) ? head[path] : null;
+    const indexOid = Object.prototype.hasOwnProperty.call(repo.index, path) ? repo.index[path] : null;
+    const workingOid = Object.prototype.hasOwnProperty.call(repo.working, path) ? oidFor('blob', repo.working[path]) : null;
+    if (headOid === null && indexOid === null && workingOid !== null) untracked.push(path);
+    if (indexOid !== headOid) staged.push(path);
+    if (workingOid !== indexOid) unstaged.push(path);
+  });
+  return { staged, unstaged, untracked };
+}
+
+function virtualFiles() {
+  const files = {};
+  keys(repo.working).forEach(path => files[path] = repo.working[path]);
+  files['.git/HEAD'] = `ref: refs/heads/${repo.headBranch}\n`;
+  files['.git/config'] = '[core]\n\trepositoryformatversion = 0\n\tbare = false\n';
+  files['.git/index'] = keys(repo.index).map(path => `100644 ${repo.index[path]} ${path}`).join('\n');
+  if (repo.origHead) files['.git/ORIG_HEAD'] = repo.origHead + '\n';
+  keys(repo.refs).forEach(branch => files[`.git/refs/heads/${branch}`] = (repo.refs[branch] || '') + '\n');
+  keys(repo.objects).forEach(oid => {
+    const object = repo.objects[oid];
+    files[`.git/objects/${oid.slice(0,2)}/${oid.slice(2)}`] = `type ${object.type}\noid  ${oid}\n\n${object.content}`;
+  });
+  keys(repo.worktrees).forEach(name => {
+    const wt = repo.worktrees[name];
+    files[`.git/worktrees/${name}/HEAD`] = `ref: refs/heads/${wt.branch}\n`;
+    files[`.git/worktrees/${name}/gitdir`] = `worktrees/${name}/.git\n`;
+    files[`worktrees/${name}/.git`] = `gitdir: ../../.git/worktrees/${name}\n`;
+    keys(wt.files).forEach(path => files[`worktrees/${name}/${path}`] = wt.files[path]);
+  });
+  return files;
+}
+function diffVirtual(before, after) {
+  const paths = new Set([...keys(before), ...keys(after)]);
+  const changes = [];
+  [...paths].sort().forEach(path => {
+    const b = Object.prototype.hasOwnProperty.call(before, path) ? before[path] : null;
+    const a = Object.prototype.hasOwnProperty.call(after, path) ? after[path] : null;
+    if (a === b) return;
+    changes.push({ path, before: b, after: a, type: b === null ? 'add' : a === null ? 'del' : 'mod' });
+  });
+  return changes;
+}
+function beginRun(command) {
+  repo.lastRun = { command, summary: '', output: '', steps: [] };
+  selectedStep = 0;
+}
+function recordStep(title, detail, action) {
+  const before = virtualFiles();
+  if (action) action();
+  const after = virtualFiles();
+  repo.lastRun.steps.push({ title, detail, changes: diffVirtual(before, after) });
+  selectedStep = repo.lastRun.steps.length - 1;
+}
+function finishRun(summary, output = '') {
+  repo.lastRun.summary = summary;
+  repo.lastRun.output = output;
+  renderAll();
+}
+
+function resolveRef(ref) {
+  const value = (ref || '').trim();
+  if (!value) return null;
+  if (repo.refs[value]) return repo.refs[value];
+  if (repo.commits[value]) return value;
+  const matches = keys(repo.commits).filter(id => id.startsWith(value));
+  return matches.length === 1 ? matches[0] : null;
+}
+function ancestorChain(id) {
+  const out = [];
+  while (id) { out.push(id); id = repo.commits[id]?.parent || null; }
+  return out;
+}
+function commonAncestor(a, b) {
+  const bSet = new Set(ancestorChain(b));
+  return ancestorChain(a).find(id => bSet.has(id)) || null;
+}
+function snapshotDelta(parent, child) {
+  const paths = new Set([...keys(parent), ...keys(child)]);
+  const out = {};
+  [...paths].sort().forEach(path => {
+    const p = Object.prototype.hasOwnProperty.call(parent, path) ? parent[path] : null;
+    const c = Object.prototype.hasOwnProperty.call(child, path) ? child[path] : null;
+    if (p !== c) out[path] = c;
+  });
+  return out;
+}
+
+const commandDefs = {
+  status: { label:'status', help:'比较 HEAD、index 与 working tree；只读，不修改仓库。', fields:[], preview:()=>'git status' },
+  diff: { label:'diff', help:'比较 working tree 与 index；勾选 cached 时比较 index 与 HEAD。', fields:[{key:'cached',label:'mode',type:'select',options:[['no','working ↔ index'],['yes','--cached (HEAD ↔ index)']]}], preview:a=>`git diff${a.cached==='yes'?' --cached':''}` },
+  add: { label:'add', help:'把工作区内容写成 blob，并更新 .git/index。', fields:[{key:'pathspec',label:'pathspec',value:'.'}], preview:a=>`git add ${a.pathspec||'.'}` },
+  commit: { label:'commit', help:'由 index 写 tree/commit object，最后移动当前 branch ref。', fields:[{key:'message',label:'message',value:'save current changes',full:true}], preview:a=>`git commit -m "${a.message||'commit'}"` },
+  branch: { label:'branch', help:'创建 refs/heads/<name>；不复制工作区，也不复制 commit。', fields:[{key:'name',label:'new branch',value:'feature'}], preview:a=>`git branch ${a.name||'feature'}` },
+  checkout: { label:'checkout', help:'修改 HEAD，并将 index / working tree 同步到目标分支 commit。', fields:[{key:'target',label:'branch',value:'main'}], preview:a=>`git checkout ${a.target||'main'}` },
+  reset: { label:'reset --hard', help:'移动当前 branch ref，再用目标 commit 覆盖 index 和 working tree。', fields:[{key:'target',label:'target ref',value:'main'}], preview:a=>`git reset --hard ${a.target||'main'}` },
+  rebase: { label:'rebase', help:'提取当前分支独有 commits 的 patch，并在新 base 上重建 commits。', fields:[{key:'upstream',label:'upstream',value:'main'}], preview:a=>`git rebase ${a.upstream||'main'}` },
+  worktree: { label:'worktree add', help:'共享同一个 object DB，但创建独立工作目录和 worktree metadata。', fields:[{key:'name',label:'worktree path',value:'lab2'},{key:'branch',label:'branch',value:'lab2'}], preview:a=>`git worktree add ${a.name||'lab2'} ${a.branch||'lab2'}` },
+  log: { label:'log', help:'读取 commit DAG；只读命令。', fields:[], preview:()=>'git log --oneline --decorate --all' }
+};
+
+function executeStatus() {
+  beginRun('git status');
+  const st = calculateStatus();
+  const output = [
+    `On branch ${repo.headBranch}`,
+    `HEAD ${short(headCommitId())}`,
+    `staged: ${st.staged.join(', ') || '(none)'}`,
+    `unstaged: ${st.unstaged.join(', ') || '(none)'}`,
+    `untracked: ${st.untracked.join(', ') || '(none)'}`
+  ].join('\n');
+  recordStep('扫描三份状态', 'HEAD snapshot、.git/index、working tree 两两比较。');
+  finishRun('status 不修改任何仓库文件。', output);
+}
+function executeDiff(args) {
+  const cached = args.cached === 'yes';
+  beginRun(cached ? 'git diff --cached' : 'git diff');
+  const left = cached ? snapshotOf(headCommitId()) : repo.index;
+  const right = cached ? repo.index : Object.fromEntries(keys(repo.working).map(path => [path, oidFor('blob', repo.working[path])]));
+  const paths = new Set([...keys(left), ...keys(right)]);
+  const output = [];
+  [...paths].sort().forEach(path => {
+    const a = left[path] || null, b = right[path] || null;
+    if (a === b) return;
+    output.push(`diff -- ${path}`);
+    output.push(`- ${a ? blobContent(a).trimEnd() : '(missing)'}`);
+    output.push(`+ ${b ? (cached ? blobContent(b) : repo.working[path]).trimEnd() : '(deleted)'}`);
+  });
+  recordStep('读取并比较快照', cached ? 'HEAD ↔ index' : 'index ↔ working tree');
+  finishRun('diff 是只读命令。', output.join('\n') || '(no differences)');
+}
+function executeAdd(args) {
+  const spec = (args.pathspec || '.').trim();
+  beginRun(`git add ${spec}`);
+  let paths;
+  if (spec === '.') paths = keys(repo.working);
+  else if (Object.prototype.hasOwnProperty.call(repo.working, spec)) paths = [spec];
+  else paths = [];
+  if (!paths.length) {
+    recordStep('没有匹配 pathspec', `未找到工作区文件：${spec}`);
+    return finishRun('没有发生变化。', 'fatal: pathspec did not match any files');
+  }
+  recordStep('写入 blob objects', '每个目标文件按内容寻址写入 .git/objects。', () => paths.forEach(path => putObject('blob', repo.working[path])));
+  recordStep('更新 .git/index', 'index 保存 path → blob OID，代表下一次 commit 候选快照。', () => stagePaths(paths));
+  finishRun('add = 写 blob + 更新 index。', `staged ${paths.length} file(s): ${paths.join(', ')}`);
+}
+function executeCommit(args) {
+  const message = (args.message || 'commit').trim();
+  beginRun(`git commit -m "${message}"`);
+  const st = calculateStatus();
+  if (!st.staged.length) {
+    recordStep('检查 index', 'index 与 HEAD 完全一致，因此没有可提交内容。');
+    return finishRun('nothing to commit', 'nothing to commit, working tree may still contain unstaged changes');
+  }
+  let treeId, commitId;
+  recordStep('写 tree object', '把当前 .git/index 物化成一个 tree object。', () => { treeId = writeTreeObject(repo.index); });
+  recordStep('写 commit object', 'commit 保存 tree、parent、Author/Committer 和 message。', () => { commitId = writeCommitObject({ treeId, parentId: headCommitId(), message }); });
+  recordStep('移动当前 branch ref', `.git/refs/heads/${repo.headBranch} → ${commitId}`, () => { repo.refs[repo.headBranch] = commitId; });
+  finishRun('commit = index → tree → commit → ref 前移。', `[${repo.headBranch} ${short(commitId)}] ${message}`);
+}
+function executeBranch(args) {
+  const name = (args.name || '').trim().replace(/\s+/g,'-');
+  beginRun(`git branch ${name}`);
+  if (!name) { recordStep('参数错误', '分支名不能为空。'); return finishRun('branch 未创建', 'fatal: not a valid branch name'); }
+  if (repo.refs[name]) { recordStep('分支已存在', `refs/heads/${name} 已存在。`); return finishRun('branch 未创建', `fatal: a branch named '${name}' already exists`); }
+  recordStep(`创建 refs/heads/${name}`, '新 ref 初始指向当前 HEAD commit。', () => { repo.refs[name] = headCommitId(); });
+  finishRun('branch 本质只是一个新的 ref 文件。', `branch '${name}' created at ${short(repo.refs[name])}`);
+}
+function executeCheckout(args) {
+  const target = (args.target || '').trim();
+  beginRun(`git checkout ${target}`);
+  if (!repo.refs[target]) { recordStep('目标不存在', `refs/heads/${target} 不存在。`); return finishRun('checkout 失败', `error: pathspec '${target}' did not match a branch`); }
+  recordStep('修改 .git/HEAD', `HEAD 改为 refs/heads/${target}。`, () => { repo.headBranch = target; });
+  recordStep('重写 index 与 working tree', '目标分支 HEAD commit 的 snapshot 被 materialize 到 index / working tree。', () => materializeCommit(headCommitId()));
+  finishRun('checkout = 改 HEAD + 同步 index/working tree。', `Switched to branch '${target}'`);
+}
+function executeReset(args) {
+  const targetText = (args.target || '').trim();
+  const target = resolveRef(targetText);
+  beginRun(`git reset --hard ${targetText}`);
+  if (!target) { recordStep('目标无法解析', `ref/commit：${targetText}`); return finishRun('reset 失败', `fatal: ambiguous argument '${targetText}'`); }
+  recordStep('写 ORIG_HEAD', '保存 reset 前的位置，便于理解历史指针移动。', () => { repo.origHead = headCommitId(); });
+  recordStep('移动当前 branch ref', `.git/refs/heads/${repo.headBranch} → ${target}`, () => { repo.refs[repo.headBranch] = target; });
+  recordStep('覆盖 index 与 working tree', '--hard 会丢弃当前未提交的 staged / unstaged 修改。', () => materializeCommit(target));
+  finishRun('reset --hard = 移动 ref + 覆盖 index/working tree。', `HEAD is now at ${short(target)} ${repo.commits[target]?.message || ''}`);
+}
+function executeRebase(args) {
+  const upstream = (args.upstream || '').trim();
+  const upstreamHead = repo.refs[upstream];
+  const oldHead = headCommitId();
+  beginRun(`git rebase ${upstream}`);
+  if (!upstreamHead || upstream === repo.headBranch) {
+    recordStep('upstream 无效', '请选择另一个存在的分支。');
+    return finishRun('rebase 未执行', 'fatal: invalid upstream');
+  }
+  const base = commonAncestor(oldHead, upstreamHead);
+  const replay = [];
+  let cursor = oldHead;
+  while (cursor && cursor !== base) { replay.push(cursor); cursor = repo.commits[cursor]?.parent || null; }
+  replay.reverse();
+  recordStep('保存 ORIG_HEAD', `记录 rebase 前 HEAD：${oldHead}`, () => { repo.origHead = oldHead; });
+  if (!replay.length) {
+    recordStep('没有独有 commits', '当前分支相对 upstream 没有需要 replay 的提交。');
+    return finishRun('Current branch is up to date.', 'Current branch is up to date.');
+  }
+  let newParent = upstreamHead;
+  replay.forEach((oldId, index) => {
+    const oldCommit = repo.commits[oldId];
+    const parentSnap = snapshotOf(oldCommit.parent);
+    const delta = snapshotDelta(parentSnap, oldCommit.snapshot);
+    recordStep(`提取旧 commit ${short(oldId)}`, `计算该 commit 相对旧 parent 的 patch（replay ${index+1}/${replay.length}）。`);
+    recordStep('把 patch 应用到新 base', `新 parent = ${short(newParent)}，working tree/index 暂时成为“新 base + patch”。`, () => {
+      const next = snapshotOf(newParent);
+      keys(delta).forEach(path => { if (delta[path] === null) delete next[path]; else next[path] = delta[path]; });
+      repo.index = deepClone(next);
+      repo.working = {};
+      keys(next).forEach(path => repo.working[path] = blobContent(next[path]));
+    });
+    let newCommit;
+    recordStep('创建新的 tree / commit', `AuthorDate 保留 ${oldCommit.authorTime}；CommitterDate 刷新；parent 改为 ${short(newParent)}。`, () => {
+      const treeId = writeTreeObject(repo.index);
+      newCommit = writeCommitObject({ treeId, parentId: newParent, message: oldCommit.message, authorTime: oldCommit.authorTime });
+    });
+    recordStep('移动当前 branch ref', `.git/refs/heads/${repo.headBranch} → ${newCommit}`, () => { repo.refs[repo.headBranch] = newCommit; newParent = newCommit; });
+  });
+  finishRun('rebase = 在新 parent 上重新创建 commits，而不是移动旧 commit。', `Successfully rebased and updated refs/heads/${repo.headBranch}.`);
+}
+function executeWorktree(args) {
+  const name = (args.name || '').trim().replace(/\s+/g,'-');
+  const branch = (args.branch || '').trim().replace(/\s+/g,'-');
+  beginRun(`git worktree add ${name} ${branch}`);
+  if (!name || !branch) { recordStep('参数错误', 'worktree path 与 branch 都不能为空。'); return finishRun('worktree 未创建', 'fatal: missing arguments'); }
+  if (repo.worktrees[name]) { recordStep('worktree 已存在', `worktrees/${name} 已存在。`); return finishRun('worktree 未创建', 'fatal: path already exists'); }
+  if (!repo.refs[branch]) recordStep(`创建 refs/heads/${branch}`, '分支不存在，教学模式下从当前 HEAD 创建。', () => { repo.refs[branch] = headCommitId(); });
+  recordStep(`写 .git/worktrees/${name}`, '主仓库保存 linked worktree 的管理信息。', () => { repo.worktrees[name] = { branch, files: {} }; });
+  recordStep(`物化 worktrees/${name}`, '该工作树共享 objects/refs，但有独立工作目录。', () => {
+    const snap = snapshotOf(repo.refs[branch]);
+    const files = {};
+    keys(snap).forEach(path => files[path] = blobContent(snap[path]));
+    repo.worktrees[name].files = files;
+  });
+  finishRun('worktree = 共享 object DB + 独立工作目录。', `Preparing worktree (new branch '${branch}')\nHEAD is now at ${short(repo.refs[branch])}`);
+}
+function executeLog() {
+  beginRun('git log --oneline --decorate --all');
+  const decorated = {};
+  keys(repo.refs).forEach(branch => { const id = repo.refs[branch]; (decorated[id] ||= []).push(branch); });
+  const seen = new Set();
+  const lines = [];
+  keys(repo.refs).forEach(branch => {
+    let id = repo.refs[branch];
+    while (id && !seen.has(id)) {
+      seen.add(id);
+      const c = repo.commits[id];
+      const dec = decorated[id]?.length ? ` (${decorated[id].join(', ')})` : '';
+      lines.push(`${short(id)}${dec} ${c.message}`);
+      id = c.parent;
+    }
+  });
+  recordStep('遍历 refs 与 commit parent', '从所有 branch refs 出发读取 commit DAG。');
+  finishRun('log 是只读命令。', lines.join('\n'));
+}
+function executeSelectedCommand() {
+  try {
+    if (selectedCommand === 'status') executeStatus();
+    else if (selectedCommand === 'diff') executeDiff(commandArgs);
+    else if (selectedCommand === 'add') executeAdd(commandArgs);
+    else if (selectedCommand === 'commit') executeCommit(commandArgs);
+    else if (selectedCommand === 'branch') executeBranch(commandArgs);
+    else if (selectedCommand === 'checkout') executeCheckout(commandArgs);
+    else if (selectedCommand === 'reset') executeReset(commandArgs);
+    else if (selectedCommand === 'rebase') executeRebase(commandArgs);
+    else if (selectedCommand === 'worktree') executeWorktree(commandArgs);
+    else if (selectedCommand === 'log') executeLog();
+  } catch (error) {
+    fail(error.message || String(error));
+  }
+}
+
+function resetRepository() {
+  repo = {
+    clock: 0, objects: {}, trees: {}, commits: {}, refs: {}, headBranch:'main',
+    working: { 'README.md':'# Mini Git\n\n这是一个教学仓库。\n', 'app.js':'console.log("v1");\n' },
+    index: {}, origHead:null, worktrees:{},
+    lastRun:{ command:'初始化仓库', summary:'仓库已重置。', output:'Ready.', steps:[] }
+  };
+  stageAll();
+  const treeId = writeTreeObject(repo.index);
+  const initial = writeCommitObject({ treeId, parentId:null, message:'initial commit' });
+  repo.refs.main = initial;
+  repo.lastRun.steps.push({ title:'初始状态', detail:'main 指向 initial commit，index 与 working tree 干净。', changes:[] });
+  selectedFile = 'README.md'; selectedStep = 0; viewerMode = 'current';
+  renderAll();
+}
+function prepareDirtyScenario() {
+  resetRepository();
+  beginRun('制造未提交修改');
+  recordStep('修改 README.md', '只改 working tree，不执行 git add。', () => { repo.working['README.md'] += '\nworking tree changed.\n'; });
+  recordStep('新增 notes.txt', '创建一个 untracked file。', () => { repo.working['notes.txt'] = 'untracked note\n'; });
+  finishRun('现在可以依次执行 status → diff → add → commit。', 'Prepared dirty working tree.');
+}
+function prepareRebaseScenario() {
+  resetRepository();
+  beginRun('构造 rebase 场景');
+  recordStep('创建 feature branch', 'feature 初始与 main 指向同一 commit。', () => { repo.refs.feature = headCommitId(); });
+  recordStep('checkout feature', 'HEAD 切到 feature。', () => { repo.headBranch='feature'; materializeCommit(headCommitId()); });
+  recordStep('feature 提交 app.js', '制造 feature 独有 commit。', () => { repo.working['app.js']='console.log("feature branch");\n'; stageAll(); internalCommit('feature: update app'); });
+  recordStep('checkout main', '回到主分支。', () => { repo.headBranch='main'; materializeCommit(headCommitId()); });
+  recordStep('main 提交 README.md', '制造 main 独有 commit，形成分叉。', () => { repo.working['README.md'] += '\nmain branch changed.\n'; stageAll(); internalCommit('main: update README'); });
+  recordStep('checkout feature', '现在 feature 与 main 已分叉。', () => { repo.headBranch='feature'; materializeCommit(headCommitId()); });
+  selectedCommand='rebase'; commandArgs={upstream:'main'};
+  finishRun('场景就绪：直接执行 git rebase main。', 'feature and main have diverged.');
+  renderCommandComposer();
+}
+function prepareWorktreeScenario() {
+  resetRepository();
+  beginRun('构造 worktree 场景');
+  recordStep('创建 docs branch', 'docs 从当前 HEAD 创建。', () => { repo.refs.docs = headCommitId(); });
+  selectedCommand='worktree'; commandArgs={name:'docs-view',branch:'docs'};
+  finishRun('场景就绪：执行 git worktree add docs-view docs。', 'branch docs prepared.');
+  renderCommandComposer();
+}
+
+function currentStep() { return repo.lastRun?.steps?.[selectedStep] || null; }
+function isRootWorkingPath(path) { return !!path && !path.startsWith('.git/') && !path.startsWith('worktrees/'); }
+function renderStateBar() {
+  const st = calculateStatus();
+  $('state-head').textContent = repo.headBranch;
+  $('state-commit').textContent = short(headCommitId());
+  $('state-staged').textContent = String(st.staged.length);
+  $('state-unstaged').textContent = String(st.unstaged.length + st.untracked.length);
+}
+function renderFileTree() {
+  const files = virtualFiles();
+  const query = $('file-search').value.trim().toLowerCase();
+  const st = calculateStatus();
+  const changed = new Map((currentStep()?.changes || []).map(c => [c.path, c.type]));
+  const groups = [
+    ['Working tree', path => !path.startsWith('.git/') && !path.startsWith('worktrees/')],
+    ['.git refs & state', path => path.startsWith('.git/') && !path.startsWith('.git/objects/') && !path.startsWith('.git/worktrees/')],
+    ['.git objects', path => path.startsWith('.git/objects/')],
+    ['Linked worktrees', path => path.startsWith('.git/worktrees/') || path.startsWith('worktrees/')]
+  ];
+  const markup = groups.map(([title, pred]) => {
+    const paths = keys(files).filter(pred).filter(path => !query || path.toLowerCase().includes(query));
+    if (!paths.length) return '';
+    const rows = paths.map(path => {
+      const flags = [];
+      if (st.staged.includes(path)) flags.push('<span class="flag staged">S</span>');
+      if (st.unstaged.includes(path) || st.untracked.includes(path)) flags.push('<span class="flag modified">M</span>');
+      if (changed.has(path)) flags.push(`<span class="flag step">${changed.get(path)}</span>`);
+      const icon = path.startsWith('.git/objects/') ? '◇' : path.startsWith('.git/') ? '◆' : path.includes('/.git') ? '↳' : '▧';
+      return `<button class="file-row ${selectedFile===path?'selected':''} ${changed.has(path)?'step-changed':''}" data-file="${html(path)}"><span class="file-icon">${icon}</span><span class="file-path">${html(path)}</span><span class="flags">${flags.join('')}</span></button>`;
+    }).join('');
+    return `<div class="tree-group"><div class="tree-group-title">${title}</div>${rows}</div>`;
+  }).join('');
+  $('file-tree').innerHTML = markup || '<div class="empty">没有匹配文件。</div>';
+  document.querySelectorAll('[data-file]').forEach(button => button.addEventListener('click', () => {
+    selectedFile = button.dataset.file;
+    renderFileTree(); renderViewer();
+  }));
+}
+function renderViewer() {
+  const files = virtualFiles();
+  if (!Object.prototype.hasOwnProperty.call(files, selectedFile)) selectedFile = keys(files)[0] || '';
+  const editable = isRootWorkingPath(selectedFile);
+  $('viewer-path').textContent = selectedFile || '(no file)';
+  $('viewer-meta').textContent = editable ? 'Working tree file · 可直接编辑' : 'Git internal / linked worktree · 只读';
+  $('save-file').style.display = editable ? '' : 'none';
+  $('file-editor').readOnly = !editable;
+  $('file-editor').value = files[selectedFile] ?? '';
+  const step = currentStep();
+  const change = step?.changes?.find(c => c.path === selectedFile);
+  if (change) {
+    $('file-diff').textContent = `BEFORE\n${change.before === null ? '(file did not exist)' : change.before}\n\n──────────── AFTER ────────────\n${change.after === null ? '(file deleted)' : change.after}`;
+    $('viewer-foot').textContent = `步骤 ${selectedStep+1} 修改了这个文件（${change.type}）。`;
+  } else {
+    $('file-diff').textContent = '当前选中步骤没有修改这个文件。';
+    $('viewer-foot').textContent = step ? `步骤 ${selectedStep+1}：${step.title}` : '点击右侧步骤查看文件变化。';
+  }
+  $('file-editor').hidden = viewerMode !== 'current';
+  $('file-diff').hidden = viewerMode !== 'diff';
+  document.querySelectorAll('.content-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view===viewerMode));
+}
+function initializeCommandArgs(command) {
+  const def = commandDefs[command];
+  const next = {};
+  def.fields.forEach(field => {
+    if (Object.prototype.hasOwnProperty.call(commandArgs, field.key)) next[field.key] = commandArgs[field.key];
+    else next[field.key] = field.value ?? field.options?.[0]?.[0] ?? '';
+  });
+  commandArgs = next;
+}
+function renderCommandTabs() {
+  $('command-tabs').innerHTML = Object.entries(commandDefs).map(([key, def]) => `<button class="cmd-tab ${selectedCommand===key?'active':''}" data-command="${key}">git ${html(def.label)}</button>`).join('');
+  document.querySelectorAll('[data-command]').forEach(button => button.addEventListener('click', () => {
+    selectedCommand = button.dataset.command; initializeCommandArgs(selectedCommand); renderCommandTabs(); renderCommandComposer();
+  }));
+}
+function renderCommandComposer() {
+  const def = commandDefs[selectedCommand];
+  if (!def) return;
+  if (!Object.keys(commandArgs).length && def.fields.length) initializeCommandArgs(selectedCommand);
+  $('command-preview').textContent = '$ ' + def.preview(commandArgs);
+  $('command-help').textContent = def.help;
+  $('arg-area').innerHTML = def.fields.length ? def.fields.map(field => {
+    let control;
+    if (field.type === 'select') control = `<select data-arg="${field.key}">${field.options.map(([value,label])=>`<option value="${html(value)}" ${commandArgs[field.key]===value?'selected':''}>${html(label)}</option>`).join('')}</select>`;
+    else control = `<input data-arg="${field.key}" value="${html(commandArgs[field.key] ?? '')}">`;
+    return `<div class="field ${field.full?'full':''}"><label>${html(field.label)}</label>${control}</div>`;
+  }).join('') : '<div class="field full"><div class="empty">这个命令没有可编辑参数。</div></div>';
+  document.querySelectorAll('[data-arg]').forEach(input => input.addEventListener('input', () => {
+    commandArgs[input.dataset.arg] = input.value;
+    $('command-preview').textContent = '$ ' + def.preview(commandArgs);
+  }));
+}
+function renderRun() {
+  const run = repo.lastRun;
+  $('run-command').textContent = run.command;
+  $('run-summary').textContent = run.summary || '';
+  $('command-output').textContent = run.output || '(no stdout)';
+  $('timeline').innerHTML = run.steps.length ? run.steps.map((step, index) => {
+    const pills = step.changes.map(change => `<button class="change-pill ${change.type}" data-change-file="${html(change.path)}">${change.type} · ${html(change.path)}</button>`).join('');
+    return `<div class="step-card ${selectedStep===index?'active':''}" data-step="${index}"><div class="step-no">${index+1}</div><div class="step-title">${html(step.title)}</div><div class="step-detail">${html(step.detail||'')}</div><div class="changes">${pills || '<span class="empty">没有直接文件改动</span>'}</div></div>`;
+  }).join('') : '<div class="empty">执行命令后，这里会显示内部步骤。</div>';
+  document.querySelectorAll('[data-step]').forEach(card => card.addEventListener('click', event => {
+    if (event.target.closest('[data-change-file]')) return;
+    selectedStep = Number(card.dataset.step); renderFileTree(); renderViewer(); renderRun();
+  }));
+  document.querySelectorAll('[data-change-file]').forEach(button => button.addEventListener('click', event => {
+    event.stopPropagation();
+    selectedFile = button.dataset.changeFile;
+    const parent = button.closest('[data-step]');
+    if (parent) selectedStep = Number(parent.dataset.step);
+    viewerMode='diff'; renderFileTree(); renderViewer(); renderRun();
+  }));
+}
+function renderAll() { renderStateBar(); renderFileTree(); renderViewer(); renderRun(); renderCommandTabs(); renderCommandComposer(); }
+
+$('save-file').addEventListener('click', () => {
+  if (!isRootWorkingPath(selectedFile)) return;
+  repo.working[selectedFile] = $('file-editor').value;
+  renderAll();
+});
+$('file-search').addEventListener('input', renderFileTree);
+$('reset-repo').addEventListener('click', resetRepository);
+$('scenario-dirty').addEventListener('click', prepareDirtyScenario);
+$('scenario-rebase').addEventListener('click', prepareRebaseScenario);
+$('scenario-worktree').addEventListener('click', prepareWorktreeScenario);
+$('execute-command').addEventListener('click', executeSelectedCommand);
+document.querySelectorAll('.content-tab').forEach(tab => tab.addEventListener('click', () => { viewerMode=tab.dataset.view; renderViewer(); }));
+
+resetRepository();
+})();
+</script>
+</body>
+</html>
