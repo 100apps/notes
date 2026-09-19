@@ -1,0 +1,9 @@
+{
+  "slug": "git-principles-lab",
+  "title": "Git 原理实验台：从 KV Object Store 到 Rebase",
+  "summary": "用交互式网页拆开 Git 黑盒：从 blob/tree/commit、index、refs 到 add/commit/checkout/rebase，并观察 Author Date 与 Committer Date。",
+  "date": "2026-09-19",
+  "updated": "2026-09-19",
+  "type": "interactive",
+  "tags": ["Git", "原理", "交互式", "工程基础"]
+}
