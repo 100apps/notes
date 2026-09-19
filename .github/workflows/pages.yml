@@ -1,4 +1,4 @@
-name: Deploy static notes to GitHub Pages
+name: Deploy notes to GitHub Pages
 
 on:
   push:
@@ -25,13 +25,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build notes index
+        run: node scripts/build.mjs
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload static site
+      - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "."
+          path: "_site"
 
       - name: Deploy to GitHub Pages
         id: deployment
