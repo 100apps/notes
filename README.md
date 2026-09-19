@@ -1,28 +1,37 @@
 # Notes
 
-公开的 AI / Agent 资料仓库。
+公开的 AI / Agent 资料仓库：
 
-这里存放由不同 AI 工具生成的交互式 HTML、Markdown 笔记、技术资料、研究报告和静态 Demo，并通过 GitHub Pages 自动发布。
+- Repository: `100apps/notes`
+- Pages: https://100apps.github.io/notes/
 
-## 结构
+## 核心结构
 
 ```text
 .
 ├── AGENTS.md
-├── entries.json
-├── index.html
-├── notes/
-│   └── YYYY/MM/DD/<slug>/
-│       ├── index.html
-│       ├── README.md
-│       └── assets/...
-└── .github/workflows/pages.yml
+├── README.md
+├── scripts/
+│   └── build.mjs
+├── .github/
+│   └── workflows/pages.yml
+├── git-principles-lab/
+│   ├── meta.json
+│   ├── index.html
+│   └── README.md
+└── <another-note>/
+    ├── meta.json
+    └── index.html
 ```
 
-## Agent
+每个 note 是根目录下的一个独立目录。
 
-所有 Agent 在创建、更新和发布资料前，应先阅读 [`AGENTS.md`](./AGENTS.md)。
+公开 URL：
 
-## 当前第一篇
+```text
+https://100apps.github.io/notes/<slug>/
+```
 
-- Git 原理实验台：从 KV Object Store 到 Rebase
+首页不维护中央内容清单。CI 会扫描每个 note 的 `meta.json` 自动生成首页。
+
+所有 Agent 在发布或更新前先阅读 [AGENTS.md](./AGENTS.md)。
