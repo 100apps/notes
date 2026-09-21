@@ -1,0 +1,605 @@
+# AI Coding Harness 工程审计 Prompt
+
+你现在是这个项目的 **AI Coding Harness / Software Engineering Harness 审计专家**。
+
+你的任务不是直接修改业务代码，而是先完整检查当前项目：判断它是否具备让“多人 + 多个 Coding Agent”长期并行开发而不失控的工程 Harness，并给出基于当前仓库实际情况的整改方案。
+
+## 目标
+
+请回答三个核心问题：
+
+1. 当前项目的 Harness 工程现状是什么？
+2. 哪些缺陷会导致 AI Coding 越写越乱、多人协作冲突、架构腐化或质量下降？
+3. 应该按照什么优先级整改，才能用最小成本建立一个可持续演进的 Harness？
+
+---
+
+# 一、先理解项目，不要急着给方案
+
+请先完整扫描和理解当前仓库，至少检查：
+
+- README / PROJECT / CLAUDE / AGENTS 等项目说明
+- docs / architecture / ADR / RFC / spec
+- 代码目录结构
+- 模块边界
+- package / dependency 关系
+- API / schema / interface / event contract
+- tests
+- CI/CD
+- lint / formatter / type check
+- build system
+- Git / PR / CODEOWNERS / contribution rules
+- scripts / Makefile / task runner
+- Agent skills / rules / commands / hooks
+- 当前未提交修改，如果可以读取
+- 最近典型代码结构和实现方式
+
+不要仅根据文档判断。
+
+必须同时检查：
+
+**文档声称的架构** 和 **代码真实体现的架构** 是否一致。
+
+如果文档不存在，不要停下来询问我，直接从代码和工程结构反推现状。
+
+---
+
+# 二、按照下面 7 个维度审计 Harness
+
+## 1. Project Context：项目上下文
+
+判断新加入的人或 Agent 能不能快速回答：
+
+- 项目解决什么问题？
+- 核心用户和核心场景是什么？
+- Non-goals 是什么？
+- 核心工程原则是什么？
+- 哪些事情不能做？
+- 当前系统整体如何工作？
+
+检查是否存在清晰、唯一、不过度重复的 Source of Truth。
+
+特别关注：
+
+- README 是否承担了太多职责
+- PROJECT.md / product spec 是否缺失
+- 多份文档是否互相冲突
+- Agent 是否需要阅读大量代码才能理解项目
+
+---
+
+## 2. Architecture：架构与边界
+
+识别当前系统真实的：
+
+- 模块
+- 子系统
+- layer
+- ownership
+- 依赖方向
+- public interface
+- private implementation
+
+重点寻找：
+
+- 循环依赖
+- 跨层调用
+- 跨模块直接访问内部实现
+- God module / shared utils 滥用
+- 大量隐式耦合
+- 相同 abstraction 被重复实现
+- Agent 很容易“不知道代码应该放哪里”的区域
+
+最终画出一个简化的实际架构图。
+
+不要设计理想架构后假装项目已经如此。
+
+---
+
+## 3. Change Boundary：变更边界
+
+判断一个 Agent 接到需求后，是否能够清楚知道：
+
+- 应该修改哪些模块
+- 不应该修改哪些模块
+- 哪些 interface 可以使用
+- 哪些 contract 不允许破坏
+- 哪些修改属于普通实现
+- 哪些修改其实属于 architecture change
+
+检查目前是否存在类似：
+
+- Change Spec
+- Issue template
+- RFC
+- task spec
+- acceptance criteria
+- scope / non-scope
+- migration plan
+
+如果没有，判断当前任务是否主要依赖自然语言 Prompt 自由发挥。
+
+---
+
+## 4. Agent Harness：Agent 执行环境
+
+检查当前是否存在：
+
+- AGENTS.md
+- CLAUDE.md
+- .claude/rules
+- skills
+- Codex instructions
+- repo-specific commands
+- 自动上下文加载机制
+- 子目录 scoped rules
+
+判断这些规则是否真正有价值。
+
+特别区分：
+
+### 低价值规则
+
+例如：
+
+- 写高质量代码
+- 注意可读性
+- 遵守最佳实践
+- 多写测试
+
+这些模型本来就知道。
+
+### 高价值规则
+
+应该主要包含模型无法天然知道的：
+
+- 本项目架构边界
+- dependency rule
+- ownership
+- public/private API
+- 特殊技术约束
+- 禁止事项
+- build/test 命令
+- legacy 限制
+- migration 规则
+- 修改某类代码必须同步修改什么
+
+检查规则是否：
+
+- 太长
+- 重复
+- 过时
+- 冲突
+- 无法执行
+- 没有按模块做 progressive disclosure
+
+---
+
+## 5. Executable Guardrails：机器可执行约束
+
+这是重点。
+
+不要只看“有没有规范”，要看规范有没有被机器执行。
+
+检查：
+
+- unit tests
+- integration tests
+- E2E
+- contract tests
+- type check
+- lint
+- schema validation
+- architecture tests
+- dependency check
+- security checks
+- API compatibility
+- migration validation
+- CI gate
+
+对于每条关键工程规则，判断：
+
+> 它目前只是 Markdown 里的软规则，还是已经成为机器可执行规则？
+
+重点寻找这种问题：
+
+~~~text
+文档说：
+domain 不允许依赖 infrastructure
+
+实际上：
+CI 完全不会阻止这种依赖
+~~~
+
+把这种“软约束但应该硬化”的规则单独列出来。
+
+---
+
+## 6. Change Verification：变更验证闭环
+
+检查一个 Agent 完成任务后，是否可以客观回答：
+
+- Requirement 满足了吗？
+- Scope 越界了吗？
+- Contract 被破坏了吗？
+- Architecture 被破坏了吗？
+- Existing behavior regression 了吗？
+- 测试是否完整？
+- 是否产生新的风险？
+
+判断当前流程是否具备：
+
+~~~text
+Understand
+→ Plan
+→ Implement
+→ Verify
+→ Review Diff
+→ Merge
+~~~
+
+还是实际上：
+
+~~~text
+Prompt
+→ Write Code
+→ 看起来能跑
+→ Merge
+~~~
+
+---
+
+## 7. Multi-Agent / Multi-Developer Scalability
+
+假设未来：
+
+- 5～10 个人同时开发
+- 每个人同时运行 1～3 个 Coding Agent
+- 每天产生大量修改
+
+评估当前项目是否会出现：
+
+- 多 Agent 经常修改相同文件
+- shared module 成为热点
+- merge conflict 激增
+- duplicated implementation
+- architecture drift
+- API 不兼容
+- 数据库 migration 冲突
+- 测试环境冲突
+- 不同 Agent 创建不同 pattern
+- 无法判断哪个实现才是标准实现
+
+特别识别当前仓库中的 **高冲突热点区域**。
+
+---
+
+# 三、不要只做 Checklist，要找 Root Cause
+
+发现问题后，不要只写：
+
+> 缺少 AGENTS.md。
+
+而应该继续问：
+
+为什么这是问题？
+
+例如：
+
+~~~text
+现象：
+多个 service 都自己实现 retry。
+
+根因：
+项目没有明确 infrastructure ownership，
+也没有标准 RetryPolicy contract。
+
+结果：
+不同 Agent 会持续产生不同 retry implementation。
+
+Harness 缺陷：
+Architecture + Contract + Executable Rule 缺失。
+~~~
+
+请优先识别这种系统性问题。
+
+---
+
+# 四、给当前 Harness 一个成熟度判断
+
+按照下面模型判断当前项目：
+
+### L0 — Prompt-driven
+
+主要依靠开发者临时 Prompt，Agent 自由修改代码。
+
+### L1 — Repo-aware
+
+有项目说明、架构说明、AGENTS、基础测试和 CI。
+
+### L2 — Contract-driven
+
+模块边界、ownership、contract、Change Spec 和 architecture checks 比较明确。
+
+### L3 — Harness-driven
+
+任务可以被结构化分解，多 Agent 可以并行工作，关键约束机器化，Change 有完整验证闭环。
+
+### L4 — Self-improving Harness
+
+Agent 的失败能够沉淀成新的 rule / skill / test / eval / contract，Harness 持续自动演进。
+
+判断当前项目处于哪个阶段。
+
+不要为了好看给高分。
+
+---
+
+# 五、输出整改方案
+
+整改方案必须按照：
+
+~~~text
+风险 × 收益 × 实施成本
+~~~
+
+排序。
+
+分成三个阶段。
+
+## P0：立即处理
+
+只放：
+
+- 当前已经造成工程风险
+- 很容易导致 AI 继续制造技术债
+- 成本相对低
+- 可以立即产生收益
+
+原则上控制在 3～7 项。
+
+---
+
+## P1：Harness V1
+
+目标：
+
+建立最小可用 Harness：
+
+~~~text
+Project Context
+↓
+Architecture Boundary
+↓
+Change Spec
+↓
+Agent Rules
+↓
+Automated Verification
+↓
+Reviewable Change
+~~~
+
+请明确建议：
+
+- 新建什么文件
+- 修改什么文件
+- 删除什么重复内容
+- 增加哪些 CI
+- 增加哪些 architecture tests
+- 哪些规则应该从 Markdown 变成代码检查
+- 哪些目录应该增加 scoped AGENTS.md
+
+---
+
+## P2：多人 / 多 Agent 演进
+
+仅规划，不要过度建设。
+
+包括可能需要：
+
+- ownership
+- CODEOWNERS
+- contract tests
+- Change Spec automation
+- Agent skills
+- architecture dependency graph
+- parallel agent isolation
+- eval
+- architecture drift detection
+- automatic context generation
+
+说明达到什么规模或出现什么信号时才值得做。
+
+---
+
+# 六、请直接生成推荐的目标目录
+
+基于当前项目，而不是机械套模板。
+
+例如：
+
+~~~text
+/
+├── PROJECT.md
+├── ARCHITECTURE.md
+├── AGENTS.md
+├── docs/
+│   └── decisions/
+├── changes/
+│   ├── active/
+│   └── done/
+├── modules/
+│   └── ...
+└── tests/
+    ├── unit/
+    ├── integration/
+    ├── contract/
+    └── architecture/
+~~~
+
+如果当前项目已经有类似结构，应优先复用，不要为了 Harness 重构目录。
+
+---
+
+# 七、给出具体文件级整改建议
+
+不要只说：
+
+> 增加 architecture tests。
+
+要具体说明：
+
+~~~text
+建议新增：
+tests/architecture/test_dependencies.py
+
+规则：
+domain/** 禁止 import infrastructure/**
+module A 只能通过 xxx interface 使用 module B
+
+原因：
+当前发现 xxx.py → yyy.py 存在直接依赖。
+~~~
+
+对于 AGENTS.md，也请直接给出建议结构和关键内容。
+
+---
+
+# 八、最后输出一个 Harness Scorecard
+
+使用 0～5 分。
+
+| 维度 | 分数 | 核心证据 | 最大问题 |
+|---|---:|---|---|
+| Project Context | | | |
+| Architecture | | | |
+| Change Boundary | | | |
+| Agent Harness | | | |
+| Executable Guardrails | | | |
+| Verification | | | |
+| Multi-Agent Scalability | | | |
+
+注意：
+
+分数只是帮助发现短板，不要为了平均分而打分。
+
+---
+
+# 九、最终输出格式
+
+严格按照下面顺序：
+
+## 1. Executive Summary
+
+用不超过 10 条结论告诉我：
+
+- 当前 Harness 成熟度
+- 最大风险
+- 最值得优先整改的事情
+
+## 2. Current Harness Map
+
+画出当前真实 Harness：
+
+~~~text
+需求
+ ↓
+???
+ ↓
+Agent
+ ↓
+Code
+ ↓
+???
+~~~
+
+指出当前关键缺口。
+
+## 3. Harness Scorecard
+
+表格输出。
+
+## 4. Findings
+
+按照严重度：
+
+- Critical
+- High
+- Medium
+- Low
+
+每个问题必须包含：
+
+~~~text
+Evidence
+Problem
+Root Cause
+Impact
+Recommendation
+~~~
+
+## 5. P0 整改
+
+给出立即可以做的事情。
+
+## 6. Harness V1 方案
+
+给出目标结构、规则和验证闭环。
+
+## 7. P2 演进路线
+
+说明以后什么时候增加哪些能力。
+
+## 8. Concrete Changes
+
+输出明确的：
+
+~~~text
+CREATE
+MODIFY
+DELETE
+~~~
+
+文件清单。
+
+## 9. Recommended Target Harness
+
+最终画出：
+
+~~~text
+Human Intent
+     ↓
+Change Spec
+     ↓
+Architecture / Contract
+     ↓
+Agent
+     ↓
+Code
+     ↓
+Test / Architecture Check / Eval
+     ↓
+Reviewable Change
+~~~
+
+并说明在当前项目里每一层分别由什么实现。
+
+---
+
+# 十、工作原则
+
+1. **Evidence first**：所有重要判断尽量引用当前仓库中的具体文件、目录、代码或配置作为证据。
+2. **不要过度设计**：不要为了 Harness 创建一个新的复杂平台。
+3. **优先现有工具**：Git、Markdown、CI、测试、lint 能解决的问题，不新增基础设施。
+4. **机器约束优于文档约束**：能自动检查的规则不要只写文档。
+5. **局部规则优于巨大 Prompt**：适合 scoped AGENTS / skills 的内容不要全部堆到根文件。
+6. **Architecture before Coding**：重点判断 AI 是否知道代码应该放在哪里，而不仅仅是代码写得是否正确。
+7. **Change before Code**：评估对象应该是完整变更，而不仅是单个文件。
+8. **不要先修改代码**：本轮首先完成审计和整改方案。除非我明确要求执行，否则保持只读。
+
+最终目标不是让项目拥有更多文档。
+
+最终目标是：
+
+> 让一个不了解历史的新 Coding Agent 进入仓库后，可以快速理解系统、在正确边界内完成任务、被自动化规则约束、证明自己的修改正确，并且不会因为越来越多 Agent 参与而使项目逐渐失控。
