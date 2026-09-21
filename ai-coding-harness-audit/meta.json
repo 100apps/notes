@@ -1,0 +1,15 @@
+{
+  "slug": "ai-coding-harness-audit",
+  "title": "AI Coding Harness 工程审计 Prompt",
+  "summary": "用于审计现有项目 AI Coding Harness 的可复用 Prompt：从项目上下文、架构边界、Change Spec、Agent 规则、可执行约束到多人多 Agent 扩展性，输出证据驱动的整改方案。",
+  "date": "2026-09-21",
+  "updated": "2026-09-21",
+  "type": "reference",
+  "tags": [
+    "AI Coding",
+    "Harness Engineering",
+    "Agent",
+    "架构",
+    "工程化"
+  ]
+}
