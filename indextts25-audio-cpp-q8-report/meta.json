@@ -1,0 +1,15 @@
+{
+  "slug": "indextts25-audio-cpp-q8-report",
+  "title": "IndexTTS-2.5 官方 Demo × audio.cpp Q8 对比",
+  "summary": "包含 12 个官方示例、官方输出与 audio.cpp Q8 CUDA 输出的可播放单文件对比报告，音频资源已全部嵌入 HTML。",
+  "date": "2026-10-01",
+  "updated": "2026-10-01",
+  "type": "report",
+  "tags": [
+    "IndexTTS",
+    "audio.cpp",
+    "TTS",
+    "性能评测",
+    "音频对比"
+  ]
+}
