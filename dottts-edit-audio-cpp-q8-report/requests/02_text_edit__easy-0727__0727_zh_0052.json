@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "本届亚运会上没有获得<sub targ=\"金牌\">任何奖牌</sub>。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/text/text_edit__easy-0727__0727_zh_0052/source.wav"
+    }
+  }
+}

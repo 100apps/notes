@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "<emo emotion=\"melancholic\">To be or not to be, that is the question; whether 'tis nobler in the mind to suffer the slings and arrows-What? No, Hamlet speaking.</emo>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/emotion/emotion_edit__curated-312__emo_c312_010_whole/source.wav"
+    }
+  }
+}

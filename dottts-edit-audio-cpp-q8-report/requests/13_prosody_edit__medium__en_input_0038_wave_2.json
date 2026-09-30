@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "As our boat <pitch>flashed down the rollers</pitch> <pitch>into the water</pitch> <pitch>I made this song</pitch> and sang it:",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/prosody/prosody_edit__medium__en_input_0038_wave_2/source.wav"
+    }
+  }
+}

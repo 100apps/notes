@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "法团<pause/>亦同时<sub targ=\"向相关部门\">向时任特首的梁振英</sub>及城市大学动物医学院的捐助者求助。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/multi/multi_edit__balanced-240__multi_edit_balanced-240_me_0214/source.wav"
+    }
+  }
+}

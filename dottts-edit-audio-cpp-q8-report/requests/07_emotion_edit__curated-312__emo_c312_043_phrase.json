@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "When God made these different races he knew that the superior would enslave the inferior, knew that <emo emotion=\"angry\">the inferior would be conquered</emo>, and finally destroyed.",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/emotion/emotion_edit__curated-312__emo_c312_043_phrase/source.wav"
+    }
+  }
+}

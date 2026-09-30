@@ -1,0 +1,15 @@
+{
+  "slug": "dottts-edit-audio-cpp-q8-report",
+  "title": "DotTTS Edit 官方 Demo × audio.cpp Q8 对比",
+  "summary": "29 个官方 DotTTS Edit 示例的 Source、官方输出与 audio.cpp DotTTS Edit Q8_0 CUDA 输出对比，含可播放音频和复现命令。",
+  "date": "2026-10-01",
+  "updated": "2026-10-01",
+  "type": "report",
+  "tags": [
+    "DotTTS Edit",
+    "audio.cpp",
+    "Q8",
+    "TTS",
+    "音频对比"
+  ]
+}

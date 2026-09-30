@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "但是非常考虑到整体的一个<pause/>家用的",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/pause/pause_edit_benchmark__full-0727__pe_0158/source.wav"
+    }
+  }
+}

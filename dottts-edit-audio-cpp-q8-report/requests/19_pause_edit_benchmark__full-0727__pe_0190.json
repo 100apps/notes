@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "让<pause/>消费者得以全面地了解和体验李宁<pause/>专业运动产品",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/pause/pause_edit_benchmark__full-0727__pe_0190/source.wav"
+    }
+  }
+}

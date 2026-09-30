@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "\"Mary, your father and I are going out to ride this afternoon, and <emo emotion=\"sad\">I am sorry, for your sake</emo>, that we can not take you with us.\"",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/emotion/emotion_edit__curated-312__emo_c312_012_phrase/source.wav"
+    }
+  }
+}

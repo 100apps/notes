@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "<rate>This service Plautus rendered, consciously or unconsciously, by making two Carthaginian soldiers talk Phoenician; that service Moliere rendered, by making so many of his characters talk Levantine and all sorts of dialects.</rate>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/prosody/prosody_edit__medium__en_input_0019_wave_2/source.wav"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "To be or not to be, that is the question; whether 'tis nobler in the mind to suffer the slings and arrows-What? <del>No, Hamlet speaking.</del> <rate>于是我决定就来谈谈种族问题</rate>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/multi_speaker/0129004bea8e4028bc12e83a1390da9f/source.wav"
+    }
+  }
+}

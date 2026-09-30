@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "<enhance>本届亚运会上没有获得任何奖牌。</enhance>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/noise/9f20ec35b544411aab21db298ee5b6d0/source.wav"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "<sub targ=\"NASA \">For, it must be stated to those who are ignorant of the case</sub><del>, that argot is both a literary phenomenon and a social result</del>.",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/text/text_edit__hard-0727__hard_0727_en_0107/source.wav"
+    }
+  }
+}

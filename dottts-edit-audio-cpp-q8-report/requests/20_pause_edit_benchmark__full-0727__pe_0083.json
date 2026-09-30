@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "I shouldn't wonder- <pause/>But they've probably spoiled her, so that she'd be tiresome if one met her again.\"",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/pause/pause_edit_benchmark__full-0727__pe_0083/source.wav"
+    }
+  }
+}

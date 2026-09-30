@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "还包括<emo emotion=\"angry\">禁毒行动和处理</emo>大规模毁灭性武器的<emo emotion=\"afraid\">恐怖活动所造成</emo>的后果。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/emotion/emotion_edit__curated-312__emo_c312_080_multi/source.wav"
+    }
+  }
+}

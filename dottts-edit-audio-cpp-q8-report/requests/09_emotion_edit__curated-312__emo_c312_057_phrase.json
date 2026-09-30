@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "然而列宁因为<emo emotion=\"sad\">他的妹妹奥利加因伤寒逝世</emo>而未能出席毕业典礼。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/emotion/emotion_edit__curated-312__emo_c312_057_phrase/source.wav"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "The exigencies of the modern industrial system frequently place individuals and households in juxtaposition between whom there is little contact in any other sense than that of juxtaposition. One's neighbors, mechanically speaking, often are socially not one's neighbors, or even acquaintances; and still their <sub targ=\"brief approval remains highly useful\">transient good opinion has a high degree of utility</sub>.",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/text/text_edit__easy-0727__0727_en_0057/source.wav"
+    }
+  }
+}

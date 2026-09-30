@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "让市民自行选择<pitch>非制订排列</pitch>英文字母<pause/>及阿拉伯数字作为车辆登记号码。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/multi/multi_edit__balanced-240__multi_edit_balanced-240_me_0165/source.wav"
+    }
+  }
+}

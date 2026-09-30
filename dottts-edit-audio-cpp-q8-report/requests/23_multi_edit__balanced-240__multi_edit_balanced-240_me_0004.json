@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "So great was the cry of the wounded, that the prior of the abbey with all his monks came forth, <pause/>who, when they <emo emotion=\"melancholic\">saw these poor wretches so slain amongst the vines</emo>, and wounded to death, confessed some of them.",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/multi/multi_edit__balanced-240__multi_edit_balanced-240_me_0004/source.wav"
+    }
+  }
+}

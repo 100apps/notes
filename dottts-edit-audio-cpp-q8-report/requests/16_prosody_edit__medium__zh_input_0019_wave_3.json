@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "<rate>九四零七五一幺九七三九</rate>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/prosody/prosody_edit__medium__zh_input_0019_wave_3/source.wav"
+    }
+  }
+}

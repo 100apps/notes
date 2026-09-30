@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "于是我决定<pitch>就来谈谈</pitch><pitch>种族问题</pitch>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/prosody/prosody_edit__medium__zh_input_0035_wave_3/source.wav"
+    }
+  }
+}

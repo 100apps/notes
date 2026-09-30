@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "其他提名包括最佳影片、最佳导演、最佳摄影、最佳服装设计、最佳电影剪辑、最佳原创配乐、最佳艺术指导、最佳音效剪辑、最佳混音和<sub targ=\"最佳改编剧本\">最佳原创剧本</sub>。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/text/text_edit__easy-0727__0727_zh_0075/source.wav"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "But, <pause/>I thank God, an imagination took him one morning that <rate>he was falling into a dropsy</rate>, and made him in such haste to go back to Cambridge to his doctor, that he never remembers anything he has to ask of me, but the coach to carry him away.",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/multi/multi_edit__balanced-240__multi_edit_balanced-240_me_0050/source.wav"
+    }
+  }
+}

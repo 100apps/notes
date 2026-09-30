@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "<sub targ=\"结果\">摄政王广场由摄政王大街呈东西向贯通</sub><sub targ=\"变了\">，另有南北六条较小的街道与广场相通</sub>。",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/text/text_edit__hard-0727__hard_0727_zh_0208/source.wav"
+    }
+  }
+}

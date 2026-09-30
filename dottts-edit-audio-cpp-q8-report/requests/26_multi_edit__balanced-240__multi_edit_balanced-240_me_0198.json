@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "就在墨线上<rate>拴上一根银针插在脚下</rate>在变换方位后<emo emotion=\"calm\">继续牵引墨线</emo>一共走了九九八十一步<sub targ=\"三枚铜钱\">九根银针</sub>被我以品字形全部插好",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/multi/multi_edit__balanced-240__multi_edit_balanced-240_me_0198/source.wav"
+    }
+  }
+}

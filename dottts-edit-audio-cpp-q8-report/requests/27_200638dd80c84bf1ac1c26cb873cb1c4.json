@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "\"How I <sub targ=\"hope\">wish</sub> you could get me a copy of that picture, Philip,\" Laura said, entreatingly.",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/noise/200638dd80c84bf1ac1c26cb873cb1c4/source.wav"
+    }
+  }
+}

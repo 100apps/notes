@@ -1,0 +1,11 @@
+{
+  "model": "dots-tts-edit-q8",
+  "request": {
+    "text": "But, <rate>in spite of my blindness,</rate> <pitch>I will be caught</pitch> neither in her net <rate>nor in the Queen's.</rate>",
+    "language": "none",
+    "options": {
+      "template_name": "edit",
+      "source_audio": "assets/official/demos/prosody/prosody_edit__medium__en_input_0054_wave_2/source.wav"
+    }
+  }
+}
